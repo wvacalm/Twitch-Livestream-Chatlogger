@@ -1,5 +1,5 @@
-config.json
-dev_notes.md
-parse.py
-logs
-main.py
+my_config.json
+dev
+modules/twitchredirect.py
+tests/test_twitchredirect.py
+.vscode

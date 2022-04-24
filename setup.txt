@@ -1,0 +1,4 @@
+In order to use TLC you need to register a Twitch application on the developer console.
+You can name it whatever you want but your OAuth redirect URL must be. 
+And it's category should be "Chat Bot"
+In this way you will be able to get your client id, and secret, and enter it into config.json
