@@ -9,9 +9,9 @@ from modules.twitchchannel import TwitchChannel
 class Authenticator:
     # twitch service
     _auth_rtoken = None
-    def __init__(self, client_id, client_secret, redirect_uri="http://localhost:3000"):
-        self._client_id = client_id
-        self._client_secret = client_secret
+    def __init__(self, config, redirect_uri="http://localhost:3000"):
+        self._client_id = config.get_client_id()
+        self._client_secret = config.get_secret()
         self._redirect_uri = redirect_uri
         self._auth_code = self.__get_authcode()
 
@@ -36,11 +36,11 @@ class Authenticator:
         auth_code = auth_url[prefixSpot + len("?code=") : postfixSpot]
         return auth_code
 
-    def refresh_clienttoken(self, auth_rtoken):
+    def refresh_clienttoken(self, clienttoken):
         url = "https://id.twitch.tv/oauth2/token"
         headers = CaseInsensitiveDict()
         headers["Content-Type"] = "application/x-www-form-urlencoded"
-        data = f"grant_type=refresh_token&refresh_token={auth_rtoken}&client_id={self._client_id}&client_secret={self._client_secret}"
+        data = f"grant_type=refresh_token&refresh_token={clienttoken.get_retoken()}&client_id={self._client_id}&client_secret={self._client_secret}"
         res = requests.post(url, headers=headers, data=data)
         res = res.json()
         auth_token = res["access_token"]
@@ -62,10 +62,10 @@ class Authenticator:
         clienttoken = ClientToken(auth_token, self._auth_rtoken, token_lifetime)
         return clienttoken
 
-    def get_channeldata(self, channel_name, auth_token):
+    def get_channeldata(self, channel_name, clienttoken):
         url = f"https://api.twitch.tv/helix/streams?user_login={channel_name}"
         headers = CaseInsensitiveDict()
-        headers["Authorization"] = f"Bearer {auth_token}"
+        headers["Authorization"] = f"Bearer {clienttoken.get_token()}"
         headers["Client-Id"] = f"{self._client_id}"
         res = requests.get(url, headers=headers).json()
         unfiltered_data = res["data"][0] if res["data"] else res["data"]

@@ -18,6 +18,7 @@ class TwitchClient:
     _channeldata = None
     _logger = None
     _config = None
+    _twitch_service = None
 
     def __init__(self, config, channel_name, redirect_uri="http://localhost:3000"):
         print("Intializing TwitchClient...")
@@ -26,9 +27,9 @@ class TwitchClient:
         self._channel_name = channel_name
 
         # SET UP DEPENDENCIES
-        twitch_service = Authenticator(self._config.get_client_id(), self._config.get_secret())
-        self._clienttoken = twitch_service.get_clienttoken()
-        self._channeldata = twitch_service.get_channeldata(self._channel_name, self._clienttoken.get_token())
+        self._twitch_service = Authenticator(self._config)
+        self._clienttoken = self._twitch_service.get_clienttoken()
+        self._channeldata = self._twitch_service.get_channeldata(self._channel_name, self._clienttoken)
         if not self._channeldata.is_valid():
             print(f"{self._channel_name} not live!\nExiting...")
             exit()
@@ -49,10 +50,8 @@ class TwitchClient:
         res = self._socket.recv(4096).decode()
         print(res)
         self._is_connected = True
-        title = self._channeldata.get_title()
-        game = self._channeldata.get_game()
+        title, game = self._channeldata.get_title(), self._channeldata.get_game()
         status = f"\n**TWITCH STREAM LOG**\n\"{title}\"\n{self._channel_name} has started streaming \"{game}\" at {self._local_datetime}\n"
-        print(status)
         self._logger.log(status)
 
     def read(self):
@@ -61,7 +60,6 @@ class TwitchClient:
         print(f"{datetime.now()}: Currently logging chat!\nTo watch chat in terminal run: tail -f {self._logger.get_path()}")
         while(self._is_connected):
             self.__check_refresh()
-            
             res = self._socket.recv(4096).decode("utf-8")
             if res.startswith("PING :tmi.twitch"):
                 print("PING Received")
@@ -82,26 +80,23 @@ class TwitchClient:
 
     def reconnect(self):
         self.disconnect()
-        twitch_service = Authenticator(self._config.get_client_id(), self._config.get_secret())
-        self._clienttoken = twitch_service.get_clienttoken(self._clienttoken.get_retoken())
+        self._clienttoken = self._twitch_service.get_clienttoken()
         self.connect()
         self.read()
 
     def __check_refresh(self):
         if (self._clienttoken.is_refreshable()):
             print("Refreshing Token!")
-            twitch_service = Authenticator(self._config.get_client_id(), self._config.get_secret())
-            self._clienttoken = twitch_service.refresh_clienttoken(self._clienttoken.get_retoken())
+            self._clienttoken = self._twitch_service.refresh_clienttoken(self._clienttoken)
 
     def __get_datetime(self, starttime):
+        # change UTC time to local time
         from_zone = tz.tzutc()
         to_zone = tz.tzlocal()
         date = starttime[ :starttime.find("T")]
         time = starttime[ starttime.find("T") + 1 : starttime.find("Z")]
-        format = "%Y-%m-%d_%H:%M:%S"
-        dt = datetime.strptime(date + "_" + time, format)
+        dt = datetime.strptime(date + "_" + time, self._format)
         dt = dt.replace(tzinfo=from_zone)
         dt = dt.astimezone(to_zone)
         dtstr = dt.strftime(format)
         return dtstr
-        

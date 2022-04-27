@@ -10,7 +10,7 @@ def get_config(path):
     with open(path) as f:
         return json.load(f)
 
-config_path = "config.json"
+config_path = "my_config.json"
 config = get_config(config_path)
 
 ### Enter desired channel name
